@@ -1,0 +1,17 @@
+#output directory
+output_dir: 
+
+# tsv file with an absolute file path per line
+input_dir: 
+
+# prefix of reference reads
+ref_reads_prefix:
+
+# how to identify read 1 and read 2 datafiles
+pairing_identifiers: R1,R2
+
+# path to directory containing non-reference reads
+read_dir:
+
+# size of kmer used for ska2
+ksize: 21

@@ -1,0 +1,13 @@
+name: expevoanalyzer
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - python>=3.9
+  - bakta
+  - ska2
+  - spades
+  - pandas
+  - biopython
+  - snakemake>=9.6
+  - snpeff
