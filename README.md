@@ -1,2 +1,2 @@
 # ExpEvoAnalyzer
-A workflow to analysis experimental evolution data.
+A workflow to analyses experimental evolution data.
