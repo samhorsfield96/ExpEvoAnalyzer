@@ -4,10 +4,17 @@ import os
 configfile: "config.yaml"
 
 def get_ska_map(wildcards):
-    checkpoint_output = checkpoints.create_file_list.get(**wildcards).output[0]
-    SAMPLES = [l.rstrip().split("\t")[0] for l in open(f"{config['output_dir']}/reads_list.tsv")]      
-    return expand("{out_dir}/ska_map/{sample}.vcf", out_dir=config['output_dir'], sample=SAMPLES)
-    
+    ckpt1 = checkpoints.create_file_list.get(**wildcards).output[0] 
+    ckpt2 = checkpoints.ska_build.get(**wildcards)
+    reads_list = f"{ckpt1.output.outdir}/../reads_list.tsv"
+    with open(reads_list) as f:
+        samples = [line.rstrip().split("\t")[0] for line in f]
+    return expand(
+        "{outdir}/ska_map/{sample}.vcf",
+        outdir=config["output_dir"],
+        sample=samples
+    )
+
 # Define the final output
 rule all:
    input:
@@ -41,6 +48,7 @@ rule shovill:
   shell:
     """
     shovill --assembler spades --outdir {output.outdir} --force --R1 {input.r1} --R2 {input.r2} --cpus {threads} --tmpdir {params.tmp_dir} &> {log}
+    rmdir {params.tmp_dir}
     echo "Assembly: {output.contigs}"
     """
 
@@ -48,7 +56,7 @@ checkpoint ska_build:
   input:
     infile=f"{config['output_dir']}/reads_list.tsv"
   output:
-    outpref=f"{config['output_dir']}/ska_build/ska_"
+    outdir=directory(f"{config['output_dir']}/ska_build")
   params:
     ksize=f"{config['ksize']}"
   threads: 40
@@ -57,18 +65,20 @@ checkpoint ska_build:
   shell:
     """
     echo "Building from {input.infile}"
-    ska build -v -o {output.outpref} -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
+    ska build -v -o {output.outdir}/ska_ -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
     """
 
 def get_ska_build(wildcards):
-  checkpoint_output = checkpoints.ska_build.get(**wildcards).output[0]
-  # For a given sample, return just that one file
-  return f"{config['output_dir']}/ska_build/ska_{wildcards.sample}.skf"
+    ckpt = checkpoints.ska_build.get(**wildcards)
+    outdir = ckpt.output.outdir
 
-checkpoint ska_map:
+    # discover all .skf files in the directory
+    return [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith(".skf")]
+
+rule ska_map:
   input:
     infile=get_ska_build,
-    contigs=f"{config['output_dir']}/ref_contigs.fa"
+    contigs=f"{config['output_dir']}/shovill/contigs.fa"
   output:
     outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
   threads: 1
@@ -78,5 +88,3 @@ checkpoint ska_map:
     """
     ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
     """
-
-
