@@ -45,11 +45,42 @@ rule shovill:
     f"{config['output_dir']}/logs/shovill.txt"
   params:
     tmp_dir=f"{config['output_dir']}/tmp"
+    shovill_params=f"{config['shovill_params']}"
   shell:
     """
-    shovill --assembler spades --outdir {output.outdir} --force --R1 {input.r1} --R2 {input.r2} --cpus {threads} --tmpdir {params.tmp_dir} &> {log}
+    shovill {params.shovill_params} --assembler spades --outdir {output.outdir} --force --R1 {input.r1} --R2 {input.r2} --cpus {threads} --tmpdir {params.tmp_dir} &> {log}
     rmdir {params.tmp_dir}
     echo "Assembly: {output.contigs}"
+    """
+
+rule pyrodigal:
+    input:
+        contigs=f"{config['output_dir']}/shovill/contigs.fa"
+    output:
+        outdir=directory(f"{config['output_dir']}/pyrodigal"),
+        gbk_file=f"{config['output_dir']}/pyrodigal/genes.gbk"
+    params:
+      basename="genes"
+    threads: 1
+    script: "scripts/run_pyrodigal.py"
+
+rule snpeff_build:
+  input:
+    indir=f"{config['output_dir']}/pyrodigal"
+    gbk_file=f"{config['output_dir']}/pyrodigal/genes.gbk"
+  output:
+    sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
+    snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin"
+  params:
+    config=f"{config['snpEFF_config']}"
+  threads: 1
+  log:
+    f"{config['output_dir']}/logs/snpeff_build.txt"
+  shell:
+    """
+    echo "Reading from {input.gbk_file}"
+    snpEff build -genbank -nodownload -dataDir {input.indir} -c {params.config} pyrodigal &> {log}
+    echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
 
 checkpoint ska_build:
@@ -88,3 +119,4 @@ rule ska_map:
     """
     ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
     """
+

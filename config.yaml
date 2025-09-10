@@ -6,10 +6,12 @@ input_dir:
 
 # reference read files
 reference_reads_R1: 
-reference_reads_R1: 
+reference_reads_R2: 
 
-# path to directory containing non-reference reads
-read_dir:
+# shovel additional params e.g. --trim for read trimming
+shovill_params: ""
 
 # size of kmer used for ska2
 ksize: 21
+
+snpEFF_config: scripts/snpEff.config
