@@ -73,7 +73,7 @@ checkpoint ska_map:
     outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
   threads: 1
   log:
-    f"{config['output_dir']}/logs/ska_map.txt"
+    f"{config['output_dir']}/logs/ska_map_{{sample}}.txt"
   shell:
     """
     ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
