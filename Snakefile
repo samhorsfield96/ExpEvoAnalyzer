@@ -66,7 +66,7 @@ rule pyrodigal:
 
 rule snpeff_build:
   input:
-    indir=f"{config['output_dir']}/pyrodigal"
+    indir=f"{config['output_dir']}/pyrodigal",
     gbk_file=f"{config['output_dir']}/pyrodigal/genes.gbk"
   output:
     sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
@@ -120,3 +120,21 @@ rule ska_map:
     ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
     """
 
+rule snpeff_run:
+  input:
+    sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
+    snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin"
+    indir=f"{config['output_dir']}/pyrodigal"
+    vcf=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
+  output:
+  params:
+    config=f"{config['snpEFF_config']}"
+  threads: 1
+  log:
+    f"{config['output_dir']}/logs/snpeff_build.txt"
+  shell:
+    """
+    echo "Reading from {input.gbk_file}"
+    snpEff -nodownload -dataDir {input.indir} -c {params.config} pyrodigal {input.vcf} &> {log}
+    echo "Built {output.snpEffectPredictor} and {output.sequence}"
+    """
