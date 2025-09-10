@@ -11,3 +11,4 @@ dependencies:
   - biopython
   - snakemake>=9.6
   - snpeff
+  - shovill
