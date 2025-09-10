@@ -1,14 +1,15 @@
 import os
 import re
 
-def detect_paired_fastq(input_dir, output_file, ignore_prefix=None):
+def detect_paired_fastq(input_dir, output_file, reference_reads_R1=None, reference_reads_R2=None):
     """
     Detect paired FASTQ files in a directory and write them to a tab-delimited file.
     
     Args:
         input_dir (str): Path to directory containing FASTQ files.
         output_file (str): Path to output TSV file.
-        ignore_prefix (str): Prefix of files to ignore (optional).
+        reference_reads_R1 (str): Reference reads R2 to ignore.
+        reference_reads_R2 (str): Reference reads R2 to ignore.
     """
     
     # Regex pattern for R1/R2 fastq files
@@ -17,7 +18,10 @@ def detect_paired_fastq(input_dir, output_file, ignore_prefix=None):
     pairs = {}
     
     for fname in os.listdir(input_dir):
-        if ignore_prefix and ignore_prefix in fname:
+        full_path = os.path.join(input_dir, fname)
+        if reference_reads_R1 and reference_reads_R1 in full_path:
+            continue
+        if reference_reads_R2 and reference_reads_R2 in full_path:
             continue
         
         match = fastq_pattern.match(fname)
@@ -25,7 +29,6 @@ def detect_paired_fastq(input_dir, output_file, ignore_prefix=None):
             continue
         
         sample_id, read_direction = match.groups()
-        full_path = os.path.join(input_dir, fname)
         
         if sample_id not in pairs:
             pairs[sample_id] = {}
@@ -39,16 +42,15 @@ def detect_paired_fastq(input_dir, output_file, ignore_prefix=None):
         for sample_id, reads in sorted(pairs.items()):
             if "R1" in reads and "R2" in reads:  # Only keep properly paired
                 out.write(f"{sample_id}\t{reads['R1']}\t{reads['R2']}\n")
-    
 
-
-detect_paired_fastq(snakemake.input.indir, snakemake.params.reference_pref, snakemake.output.output_file)
+detect_paired_fastq(snakemake.input.indir, snakemake.output.output_file, snakemake.params.reference_reads_R1, snakemake.params.reference_reads_R2)
 
 # indir = "/nfs/research/jlees/shorsfield/McClean_group_analysis/Illumina_Seq"    
-# reference_pref = "Ancestral"
+# reference_reads_R1 = "/nfs/research/jlees/shorsfield/McClean_group_analysis/Illumina_Seq/Ancestral_Strain_020_S28_R1_001.fastq.gz"
+# reference_reads_R2 = "/nfs/research/jlees/shorsfield/McClean_group_analysis/Illumina_Seq/Ancestral_Strain_020_S28_R2_001.fastq.gz"
 # output_file = "/nfs/research/jlees/shorsfield/McClean_group_analysis/paired_reads.txt"
 
-# detect_paired_fastq(indir, output_file, reference_pref)
+# detect_paired_fastq(indir, output_file, reference_reads_R1, reference_reads_R2)
 
 
     
