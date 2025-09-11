@@ -140,8 +140,8 @@ rule snpeff_run:
   shell:
     """
     echo "Reading from {input.gbk_file}"
-    snpEff -nodownload -dataDir {params.indir} -c {params.config} pyrodigal {input.vcf} > {output.ann_vcf} 2> {log}
+    snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir {params.indir} -c {params.config} pyrodigal {input.vcf} > {output.ann_vcf} 2> {log}
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
 
-#snpEff -nodownload -dataDir /nfs/research/jlees/shorsfield/McClean_group_analysis -c scripts/snpEff.config pyrodigal /nfs/research/jlees/shorsfield/McClean_group_analysis/Variant_Calling/Variant_Calling/D4H1_002/10_breseq/output.vcf > /nfs/research/jlees/shorsfield/McClean_group_analysis/expevoanalyzer_test_old/D4H1_002.ann.vcf
+#snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir /nfs/research/jlees/shorsfield/McClean_group_analysis -c scripts/snpEff.config pyrodigal /nfs/research/jlees/shorsfield/McClean_group_analysis/Variant_Calling/Variant_Calling/D4H1_002/10_breseq/output.vcf > /nfs/research/jlees/shorsfield/McClean_group_analysis/expevoanalyzer_test_old/D4H1_002.ann.vcf 2> /nfs/research/jlees/shorsfield/McClean_group_analysis/snpEff.log
