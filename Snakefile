@@ -5,10 +5,11 @@ configfile: "config.yaml"
 
 def get_snpeff_run(wildcards):
     # Wait for create_file_list to finish
-    ckpt = checkpoints.create_file_list.get(**wildcards)
+    ckpt1 = checkpoints.create_file_list.get(**wildcards)
+    ckpt2 = checkpoints.snpeff_run.get(**wildcards)
 
     # Grab the reads list it produced
-    reads_list = ckpt.output.outfile
+    reads_list = ckpt1.output.outfile
 
     # Collect sample names from the file
     with open(reads_list) as f:
@@ -26,8 +27,9 @@ rule all:
       f"{config['output_dir']}/reads_list/reads_list_all.tsv",
       f"{config['output_dir']}/shovill/contigs.fa",
       f"{config['output_dir']}/bakta/genes.gbk",
-      f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
-      get_snpeff_run
+      f"{config['output_dir']}/bakta/snpEffectPredictor.bin",
+      get_snpeff_run,
+      f"{config['output_dir']}/annotated_variants.csv"
 
 checkpoint create_file_list:
   input:
@@ -107,7 +109,7 @@ rule snpeff_build:
     snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} bakta &> {log}
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
-    
+
 rule ska_build:
   input:
     infile=f"{config['output_dir']}/reads_list/{{sample}}.txt",
@@ -144,7 +146,7 @@ rule ska_map:
     ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
     """
 
-rule snpeff_run:
+checkpoint snpeff_run:
   input:
     sequence=f"{config['output_dir']}/bakta/sequence.bin",
     snpEffectPredictor=f"{config['output_dir']}/bakta/snpEffectPredictor.bin",
@@ -164,3 +166,12 @@ rule snpeff_run:
     snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir {params.indir} -c {params.config} bakta {input.vcf} > {output.ann_vcf} 2> {log}
     echo "Built {input.snpEffectPredictor} and {input.sequence}"
     """
+
+rule read_ann_vcf:
+  input:
+    ann_vcf=get_snpeff_run,
+    indir=f"{config['output_dir']}/snpeff/"
+  output:
+    outfile=f"{config['output_dir']}/annotated_variants.csv"
+  script:
+    "scripts/read_ann_vcf.py"
