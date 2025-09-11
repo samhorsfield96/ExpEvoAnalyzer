@@ -169,9 +169,10 @@ checkpoint snpeff_run:
 
 rule read_ann_vcf:
   input:
-    ann_vcf=get_snpeff_run,
-    indir=f"{config['output_dir']}/snpeff/"
+    ann_vcf=get_snpeff_run
   output:
     outfile=f"{config['output_dir']}/annotated_variants.csv"
+  params:
+    indir=f"{config['output_dir']}/snpeff"
   script:
     "scripts/read_ann_vcf.py"

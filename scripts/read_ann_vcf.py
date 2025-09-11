@@ -70,7 +70,7 @@ def read_ann_vcf(indir, outfile, ignore_n=True):
     df = build_matrix(all_variants, sample_variants)
     df.to_csv(outfile, index=False)
 
-read_ann_vcf(snakemake.input.indir, snakemake.output.outfile)
+read_ann_vcf(snakemake.params.indir, snakemake.output.outfile)
 
 def main():
     parser = argparse.ArgumentParser(description="Summarize SNPeff-annotated VCFs into Excel matrix")
