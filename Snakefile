@@ -3,27 +3,20 @@ import os
 
 configfile: "config.yaml"
 
-def get_ska_map(wildcards):
-    ckpt1 = checkpoints.create_file_list.get(**wildcards).output[0] 
-    ckpt2 = checkpoints.ska_build.get(**wildcards)
-    reads_list = f"{ckpt1.output.outfile}"
+def get_snpeff_run(wildcards):
+    # Wait for create_file_list to finish
+    ckpt = checkpoints.create_file_list.get(**wildcards)
+
+    # Grab the reads list it produced
+    reads_list = ckpt.output.outfile
+
+    # Collect sample names from the file
     with open(reads_list) as f:
         samples = [line.rstrip().split("\t")[0] for line in f]
+
+    # Return all snpEff-annotated VCFs expected for these samples
     return expand(
-        "{outdir}/ska_map/{sample}.vcf",
-        outdir=config["output_dir"],
-        sample=samples
-    )
-  
-def get_snpeff_build(wildcards):
-    ckpt1 = checkpoints.create_file_list.get(**wildcards).output[0] 
-    ckpt2 = checkpoints.ska_build.get(**wildcards)
-    reads_list = f"{ckpt1.output.outfile}"
-    with open(reads_list) as f:
-        samples = [line.rstrip().split("\t")[0] for line in f]
-    return expand(
-        "{outdir}/snpeff/{sample}.ann.vcf",
-        outdir=config["output_dir"],
+        f"{config['output_dir']}/snpeff/{{sample}}.ann.vcf",
         sample=samples
     )
 
@@ -34,8 +27,7 @@ rule all:
       f"{config['output_dir']}/shovill/contigs.fa",
       f"{config['output_dir']}/pyrodigal/genes.gbk",
       f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
-      get_ska_map,
-      get_snpeff_build
+      get_snpeff_run
 
 checkpoint create_file_list:
   input:
@@ -110,7 +102,7 @@ rule snpeff_build:
 
 checkpoint ska_build:
   input:
-    infile=get_create_file_list
+    infile=f"{config['output_dir']}/reads_list/{{sample}}.txt",
   output:
     outpref=f"{config['output_dir']}/ska_build/{{sample}}",
     outfile=f"{config['output_dir']}/ska_build/{{sample}}.skf"
