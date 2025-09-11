@@ -73,7 +73,8 @@ rule bakta:
       contigs=f"{config['output_dir']}/shovill/contigs.fa"
     output:
       ann_dir = directory(f"{config['output_dir']}/bakta"),
-      gbk_file = f"{config['output_dir']}/bakta/genes.gbff"
+      gbk_file = f"{config['output_dir']}/bakta/genes.gbk",
+      gbff_file = f"{config['output_dir']}/bakta/genes.gbff",
     threads: 40
     params:
         DB = directory(f"{config['bakta_db']}"),
@@ -83,27 +84,26 @@ rule bakta:
     shell:
         """
         mkdir -p {params.tmp_dir}
-        bakta {input.contigs} --tmp-dir {params.tmp_dir} --force --keep-contig-headers --db {params.DB} --prefix genes --translation-table 11 --skip-plot --threads {threads} --output {output.ann_dir} -v &> {log}
+        bakta {input.contigs} --tmp-dir {params.tmp_dir} --force --keep-contig-headers --db {params.DB} --prefix genes --translation-table 11 --skip-plot --threads {threads} --output {output.ann_dir} &> {log}
         rmdir {params.tmp_dir}
+        cp {output.gbff_file} {output.gbk_file}
         """
 
 rule snpeff_build:
   input:
-    gbk_file=f"{config['output_dir']}/bakta/genes.gbff"
+    gbk_file = f"{config['output_dir']}/bakta/genes.gbk"
   output:
     sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
     snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin"
   params:
     config=f"{config['snpEFF_config']}",
-    indir=f"{config['output_dir']}"
-    gbk_prefix=f"{config['output_dir']}/bakta/genes"
+    indir=f"{config['output_dir']}",
   threads: 1
   log:
     f"{config['output_dir']}/logs/snpeff_build.txt"
   shell:
     """
     echo "Reading from {input.gbk_file}"
-    cp {input.gbk_file} {params.gbk_prefix}.gbk
     snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} pyrodigal &> {log}
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
