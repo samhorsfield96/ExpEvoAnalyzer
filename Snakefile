@@ -107,13 +107,15 @@ checkpoint ska_build:
     outpref=f"{config['output_dir']}/ska_build/{{sample}}",
     outfile=f"{config['output_dir']}/ska_build/{{sample}}.skf"
   params:
+    outdir=f"{config['output_dir']}/ska_build",
     ksize=f"{config['ksize']}"
-  threads: 40
+  threads: 8
   log:
     f"{config['output_dir']}/logs/ska_build_{{sample}}.txt"
   shell:
     """
     echo "Building from {input.infile}"
+    mkdir -p {params.outdir}
     ska build -v -o {output.outpref} -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
     """
 
@@ -122,21 +124,17 @@ rule ska_map:
     infile=f"{config['output_dir']}/ska_build/{{sample}}.skf",
     contigs=f"{config['output_dir']}/shovill/contigs.fa"
   output:
-    outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf",
+    outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
+  params:
+    outdir=f"{config['output_dir']}/ska_map",
   threads: 1
   log:
     f"{config['output_dir']}/logs/ska_map_{{sample}}.txt"
   shell:
     """
+    mkdir -p {params.outdir}
     ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
     """
-
-# def get_ska_map(wildcards):
-#     ckpt = checkpoints.ska_build.get(**wildcards)
-#     outdir = ckpt.output.outdir
-
-#     # discover all .skf files in the directory
-#     return [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith(".skf")]
 
 rule snpeff_run:
   input:
