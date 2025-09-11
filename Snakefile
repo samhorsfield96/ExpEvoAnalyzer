@@ -14,6 +14,18 @@ def get_ska_map(wildcards):
         outdir=config["output_dir"],
         sample=samples
     )
+  
+def get_snpeff_build(wildcards):
+    ckpt1 = checkpoints.create_file_list.get(**wildcards).output[0] 
+    ckpt2 = checkpoints.ska_build.get(**wildcards)
+    reads_list = f"{ckpt1.output.outdir}/../reads_list.tsv"
+    with open(reads_list) as f:
+        samples = [line.rstrip().split("\t")[0] for line in f]
+    return expand(
+        "{outdir}/snpeff/{sample}.ann.vcf",
+        outdir=config["output_dir"],
+        sample=samples
+    )
 
 # Define the final output
 rule all:
@@ -22,7 +34,8 @@ rule all:
       f"{config['output_dir']}/shovill/contigs.fa",
       f"{config['output_dir']}/pyrodigal/genes.gbk",
       f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
-      get_ska_map
+      get_ska_map,
+      get_snpeff_build
 
 checkpoint create_file_list:
   input:
@@ -127,16 +140,16 @@ rule ska_map:
 rule snpeff_run:
   input:
     sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
-    snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin"
+    snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
     vcf=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
   output:
     ann_vcf=f"{config['output_dir']}/snpeff/{{sample}}.ann.vcf"
   params:
-    config=f"{config['snpEFF_config']}"
+    config=f"{config['snpEFF_config']}",
     indir=f"{config['output_dir']}"
   threads: 1
   log:
-    f"{config['output_dir']}/logs/snpeff_build.txt"
+    f"{config['output_dir']}/logs/snpeff_build_{{sample}}.txt"
   shell:
     """
     echo "Reading from {input.gbk_file}"
