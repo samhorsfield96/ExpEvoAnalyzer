@@ -6,7 +6,6 @@ configfile: "config.yaml"
 def get_snpeff_run(wildcards):
     # Wait for create_file_list to finish
     ckpt1 = checkpoints.create_file_list.get(**wildcards)
-    ckpt2 = checkpoints.snpeff_run.get(**wildcards)
 
     # Grab the reads list it produced
     reads_list = ckpt1.output.outfile
@@ -67,7 +66,6 @@ rule shovill:
     """
     shovill {params.shovill_params} --assembler spades --outdir {output.outdir} --force --R1 {input.r1} --R2 {input.r2} --cpus {threads} --tmpdir {params.tmp_dir} &> {log}
     rmdir {params.tmp_dir}
-    echo "Assembly: {output.contigs}"
     """
 
 rule bakta:
@@ -105,9 +103,7 @@ rule snpeff_build:
     f"{config['output_dir']}/logs/snpeff_build.txt"
   shell:
     """
-    echo "Reading from {input.gbk_file}"
     snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} bakta &> {log}
-    echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
 
 rule ska_build:
@@ -124,7 +120,6 @@ rule ska_build:
     f"{config['output_dir']}/logs/ska_build_{{sample}}.txt"
   shell:
     """
-    echo "Building from {input.infile}"
     mkdir -p {params.outdir}
     ska build -v -o {params.outpref} -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
     """
@@ -164,7 +159,6 @@ checkpoint snpeff_run:
     """
     mkdir -p {params.outdir}
     snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir {params.indir} -c {params.config} bakta {input.vcf} > {output.ann_vcf} 2> {log}
-    echo "Built {input.snpEffectPredictor} and {input.sequence}"
     """
 
 rule read_ann_vcf:
