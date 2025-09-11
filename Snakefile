@@ -6,7 +6,7 @@ configfile: "config.yaml"
 def get_ska_map(wildcards):
     ckpt1 = checkpoints.create_file_list.get(**wildcards).output[0] 
     ckpt2 = checkpoints.ska_build.get(**wildcards)
-    reads_list = f"{ckpt1.output.outdir}/../reads_list.tsv"
+    reads_list = f"{ckpt1.output.outfile}"
     with open(reads_list) as f:
         samples = [line.rstrip().split("\t")[0] for line in f]
     return expand(
@@ -18,7 +18,7 @@ def get_ska_map(wildcards):
 def get_snpeff_build(wildcards):
     ckpt1 = checkpoints.create_file_list.get(**wildcards).output[0] 
     ckpt2 = checkpoints.ska_build.get(**wildcards)
-    reads_list = f"{ckpt1.output.outdir}/../reads_list.tsv"
+    reads_list = f"{ckpt1.output.outfile}"
     with open(reads_list) as f:
         samples = [line.rstrip().split("\t")[0] for line in f]
     return expand(
@@ -30,7 +30,7 @@ def get_snpeff_build(wildcards):
 # Define the final output
 rule all:
    input:
-      f"{config['output_dir']}/reads_list.tsv",
+      f"{config['output_dir']}/reads_list/reads_list_all.tsv",
       f"{config['output_dir']}/shovill/contigs.fa",
       f"{config['output_dir']}/pyrodigal/genes.gbk",
       f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
@@ -41,12 +41,20 @@ checkpoint create_file_list:
   input:
     indir=f"{config['input_dir']}",
   output:
-    output_file=f"{config['output_dir']}/reads_list.tsv",
+    output_dir=directory(f"{config['output_dir']}/reads_list"),
+    outfile=f"{config['output_dir']}/reads_list/reads_list_all.tsv"
   params:
     reference_reads_R1=f"{config['reference_reads_R1']}",
     reference_reads_R2=f"{config['reference_reads_R2']}"
   script:
     "scripts/create_file_list.py"
+
+def get_create_file_list(wildcards):
+    ckpt = checkpoints.create_file_list.get(**wildcards)
+    outdir = ckpt.output.output_dir
+
+    # discover all .txt files in the directory
+    return [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith(".txt")]
 
 rule shovill:
   input:
@@ -102,33 +110,27 @@ rule snpeff_build:
 
 checkpoint ska_build:
   input:
-    infile=f"{config['output_dir']}/reads_list.tsv"
+    infile=get_create_file_list
   output:
-    outdir=directory(f"{config['output_dir']}/ska_build")
+    outpref=f"{config['output_dir']}/ska_build/{{sample}}",
+    outfile=f"{config['output_dir']}/ska_build/{{sample}}.skf"
   params:
     ksize=f"{config['ksize']}"
   threads: 40
   log:
-    f"{config['output_dir']}/logs/ska_build.txt"
+    f"{config['output_dir']}/logs/ska_build_{{sample}}.txt"
   shell:
     """
     echo "Building from {input.infile}"
-    ska build -v -o {output.outdir}/ska_ -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
+    ska build -v -o {output.outpref} -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
     """
-
-def get_ska_build(wildcards):
-    ckpt = checkpoints.ska_build.get(**wildcards)
-    outdir = ckpt.output.outdir
-
-    # discover all .skf files in the directory
-    return [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith(".skf")]
 
 rule ska_map:
   input:
-    infile=get_ska_build,
+    infile=f"{config['output_dir']}/ska_build/{{sample}}.skf",
     contigs=f"{config['output_dir']}/shovill/contigs.fa"
   output:
-    outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
+    outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf",
   threads: 1
   log:
     f"{config['output_dir']}/logs/ska_map_{{sample}}.txt"
@@ -136,6 +138,13 @@ rule ska_map:
     """
     ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
     """
+
+# def get_ska_map(wildcards):
+#     ckpt = checkpoints.ska_build.get(**wildcards)
+#     outdir = ckpt.output.outdir
+
+#     # discover all .skf files in the directory
+#     return [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith(".skf")]
 
 rule snpeff_run:
   input:
@@ -157,4 +166,4 @@ rule snpeff_run:
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
 
-#snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir /nfs/research/jlees/shorsfield/McClean_group_analysis -c scripts/snpEff.config pyrodigal /nfs/research/jlees/shorsfield/McClean_group_analysis/Variant_Calling/Variant_Calling/D4H1_002/10_breseq/output.vcf > /nfs/research/jlees/shorsfield/McClean_group_analysis/expevoanalyzer_test_old/D4H1_002.ann.vcf 2> /nfs/research/jlees/shorsfield/McClean_group_analysis/snpEff.log
+#snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir /nfs/research/jlees/shorsfield/McClean_group_analysis -c scripts/snpEff.config pyrodigal /nfs/research/jlees/shorsfield/McClean_group_analysis/ska_map.vcf > /nfs/research/jlees/shorsfield/McClean_group_analysis/ska_map.ann.vcf 2> /nfs/research/jlees/shorsfield/McClean_group_analysis/snpEff.log
