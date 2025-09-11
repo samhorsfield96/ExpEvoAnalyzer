@@ -25,7 +25,7 @@ rule all:
    input:
       f"{config['output_dir']}/reads_list/reads_list_all.tsv",
       f"{config['output_dir']}/shovill/contigs.fa",
-      f"{config['output_dir']}/pyrodigal/genes.gbk",
+      f"{config['output_dir']}/bakta/genes.gbff",
       f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
       get_snpeff_run
 
@@ -68,32 +68,42 @@ rule shovill:
     echo "Assembly: {output.contigs}"
     """
 
-rule pyrodigal:
+rule bakta:
     input:
-        contigs=f"{config['output_dir']}/shovill/contigs.fa"
+      contigs=f"{config['output_dir']}/shovill/contigs.fa"
     output:
-        outdir=directory(f"{config['output_dir']}/pyrodigal"),
-        gbk_file=f"{config['output_dir']}/pyrodigal/genes.gbk"
+      ann_dir = directory(f"{config['output_dir']}/bakta"),
+      gbk_file = f"{config['output_dir']}/bakta/genes.gbff"
+    threads: 40
     params:
-      basename="genes"
-    threads: 1
-    script: "scripts/run_pyrodigal.py"
+        DB = directory(f"{config['bakta_db']}"),
+        tmp_dir=f"{config['output_dir']}/tmp"
+    log:
+        f"{config['output_dir']}/logs/bakta.log"
+    shell:
+        """
+        mkdir -p {params.tmp_dir}
+        bakta {input.contigs} --tmp-dir {params.tmp_dir} --force --keep-contig-headers --db {params.DB} --prefix genes --translation-table 11 --skip-plot --threads {threads} --output {output.ann_dir} -v &> {log}
+        rmdir {params.tmp_dir}
+        """
 
 rule snpeff_build:
   input:
-    gbk_file=f"{config['output_dir']}/pyrodigal/genes.gbk"
+    gbk_file=f"{config['output_dir']}/bakta/genes.gbff"
   output:
     sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
     snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin"
   params:
     config=f"{config['snpEFF_config']}",
     indir=f"{config['output_dir']}"
+    gbk_prefix=f"{config['output_dir']}/bakta/genes"
   threads: 1
   log:
     f"{config['output_dir']}/logs/snpeff_build.txt"
   shell:
     """
     echo "Reading from {input.gbk_file}"
+    cp {input.gbk_file} {params.gbk_prefix}.gbk
     snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} pyrodigal &> {log}
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
@@ -104,10 +114,10 @@ checkpoint ska_build:
   input:
     infile=f"{config['output_dir']}/reads_list/{{sample}}.txt",
   output:
-    outpref=f"{config['output_dir']}/ska_build/{{sample}}",
     outfile=f"{config['output_dir']}/ska_build/{{sample}}.skf"
   params:
     outdir=f"{config['output_dir']}/ska_build",
+    outpref=f"{config['output_dir']}/ska_build/{{sample}}",
     ksize=f"{config['ksize']}"
   threads: 8
   log:
@@ -116,7 +126,7 @@ checkpoint ska_build:
     """
     echo "Building from {input.infile}"
     mkdir -p {params.outdir}
-    ska build -v -o {output.outpref} -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
+    ska build -v -o {params.outpref} -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
     """
 
 rule ska_map:
@@ -151,7 +161,6 @@ rule snpeff_run:
     f"{config['output_dir']}/logs/snpeff_build_{{sample}}.txt"
   shell:
     """
-    echo "Reading from {input.gbk_file}"
     snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir {params.indir} -c {params.config} pyrodigal {input.vcf} > {output.ann_vcf} 2> {log}
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """

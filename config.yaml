@@ -14,4 +14,8 @@ shovill_params: ""
 # size of kmer used for ska2
 ksize: 21
 
+# path to snpEff config, found in script directory
 snpEFF_config: scripts/snpEff.config
+
+# path to bakta database, needs to be downloaded and updated before running (see here https://github.com/oschwengers/bakta#database-download)
+bakta_db: 
