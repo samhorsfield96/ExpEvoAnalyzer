@@ -3,12 +3,12 @@ import argparse
 import pandas as pd
 import vcf  # pip install PyVCF
 
-#Define impact priority
+# Define impact priority
 IMPACT_ORDER = {"HIGH": 3, "MODERATE": 2, "LOW": 1, "MODIFIER": 0}
 
 def parse_vcfs(input_dir, ignore_n=False):
-    all_sites = {}
-    sample_variants = {}
+    all_sites = {}  # { "chr:pos": ref_allele }
+    sample_variants = {}  # { sample: { "chr:pos": "ALT|GENE|IMPACT|EFFECT" } }
 
     for file in os.listdir(input_dir):
         if file.endswith(".ann.vcf"):
@@ -22,11 +22,15 @@ def parse_vcfs(input_dir, ignore_n=False):
                 if ignore_n and ('N' in record.REF or any('N' in str(alt) for alt in record.ALT)):
                     continue
 
+                pos_id = f"{record.CHROM}:{record.POS}"
+                if pos_id not in all_sites:
+                    all_sites[pos_id] = record.REF
+
                 ann_field = record.INFO.get("ANN")
                 if not ann_field:
                     continue
 
-                # Select the annotation with the highest impact
+                # Pick best annotation (highest impact)
                 best_ann = None
                 best_score = -1
 
@@ -37,25 +41,19 @@ def parse_vcfs(input_dir, ignore_n=False):
                     effect = parts[1]
                     impact = parts[2]
                     gene = parts[3]
-
                     score = IMPACT_ORDER.get(impact, -1)
                     if score > best_score:
                         best_ann = (gene, effect, impact)
                         best_score = score
 
                 if best_ann is None:
-                    continue  # skip if no valid annotation
+                    continue
 
                 gene, effect, impact = best_ann
-                site_id = f"{record.CHROM}:{record.POS}|{gene}|{impact}|{effect}"
-
-                # Store reference allele (same across samples)
-                if site_id not in all_sites:
-                    all_sites[site_id] = record.REF
-
-                # Store ALT allele(s) for this sample
                 alt_alleles = ",".join(str(a) for a in record.ALT)
-                sample_variants[sample_name][site_id] = alt_alleles
+
+                # Store full allele + annotation
+                sample_variants[sample_name][pos_id] = f"{alt_alleles}|{gene}|{impact}|{effect}"
 
     return all_sites, sample_variants
 
@@ -73,9 +71,9 @@ def build_matrix(all_sites, sample_variants):
         row = [sample]
         for site in sites_sorted:
             if site in vars:
-                row.append(vars[site])  # ALT allele(s)
+                row.append(vars[site])  # ALT + annotation
             else:
-                row.append(all_sites[site])  # matches reference
+                row.append(all_sites[site])  # just REF
         matrix.append(row)
 
     df = pd.DataFrame(matrix, columns=["Sample"] + sites_sorted)
