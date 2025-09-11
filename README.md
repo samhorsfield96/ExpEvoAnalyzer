@@ -29,9 +29,11 @@ mamba activate expevoanalyzer
 
 ## Running:
 
+ExpEvoAnalyzer expects all reads to be trimmed (adapters removed).
+
 Update `config.yaml` to specify workflow and directory paths.
 - `output_dir`: path to output directory. Does not need to exist prior to running.
-- `input_dir`: path to directory containing paired-end FASTQ files (gzipped or uncompressed), one per line.
+- `input_dir`: path to directory containing paired-end FASTQ files (gzipped or uncompressed). 
 - `reference_reads_R1`: path to FASTQ of read 1 for the reference isolate.
 - `reference_reads_R2`: path to FASTQ of read 2 for the reference isolate.
 - `shovill_params`: additional parameters for [shovill](https://github.com/tseemann/shovill) e.g. `--trim`
