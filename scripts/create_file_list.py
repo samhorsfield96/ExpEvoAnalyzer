@@ -1,13 +1,13 @@
 import os
 import re
 
-def detect_paired_fastq(input_dir, output_file, reference_reads_R1=None, reference_reads_R2=None):
+def detect_paired_fastq(input_dir, output_dir, reference_reads_R1=None, reference_reads_R2=None):
     """
     Detect paired FASTQ files in a directory and write them to a tab-delimited file.
     
     Args:
         input_dir (str): Path to directory containing FASTQ files.
-        output_file (str): Path to output TSV file.
+        output_dir (str): Output directory.
         reference_reads_R1 (str): Reference reads R2 to ignore.
         reference_reads_R2 (str): Reference reads R2 to ignore.
     """
@@ -38,12 +38,17 @@ def detect_paired_fastq(input_dir, output_file, reference_reads_R1=None, referen
         elif "2" in read_direction:
             pairs[sample_id]["R2"] = full_path
     
+    output_file = os.path.join(output_dir, "reads_list_all.tsv")
+
     with open(output_file, "w") as out:
         for sample_id, reads in sorted(pairs.items()):
-            if "R1" in reads and "R2" in reads:  # Only keep properly paired
-                out.write(f"{sample_id}\t{reads['R1']}\t{reads['R2']}\n")
+            indiv_output_file = os.path.join(output_dir, sample_id + ".txt")
+            with open(indiv_output_file, "w") as indiv_out:
+                if "R1" in reads and "R2" in reads:  # Only keep properly paired
+                    out.write(f"{sample_id}\t{reads['R1']}\t{reads['R2']}\n")
+                    indiv_out.write(f"{sample_id}\t{reads['R1']}\t{reads['R2']}\n")
 
-detect_paired_fastq(snakemake.input.indir, snakemake.output.output_file, snakemake.params.reference_reads_R1, snakemake.params.reference_reads_R2)
+detect_paired_fastq(snakemake.input.indir, snakemake.output.output_dir, snakemake.params.reference_reads_R1, snakemake.params.reference_reads_R2)
 
 # indir = "/nfs/research/jlees/shorsfield/McClean_group_analysis/Illumina_Seq"    
 # reference_reads_R1 = "/nfs/research/jlees/shorsfield/McClean_group_analysis/Illumina_Seq/Ancestral_Strain_020_S28_R1_001.fastq.gz"
