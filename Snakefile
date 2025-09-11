@@ -20,6 +20,8 @@ rule all:
    input:
       f"{config['output_dir']}/reads_list.tsv",
       f"{config['output_dir']}/shovill/contigs.fa",
+      f"{config['output_dir']}/pyrodigal/genes.gbk",
+      f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
       get_ska_map
 
 checkpoint create_file_list:
@@ -44,7 +46,7 @@ rule shovill:
   log:
     f"{config['output_dir']}/logs/shovill.txt"
   params:
-    tmp_dir=f"{config['output_dir']}/tmp"
+    tmp_dir=f"{config['output_dir']}/tmp",
     shovill_params=f"{config['shovill_params']}"
   shell:
     """
@@ -66,22 +68,24 @@ rule pyrodigal:
 
 rule snpeff_build:
   input:
-    indir=f"{config['output_dir']}/pyrodigal",
     gbk_file=f"{config['output_dir']}/pyrodigal/genes.gbk"
   output:
     sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
     snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin"
   params:
-    config=f"{config['snpEFF_config']}"
+    config=f"{config['snpEFF_config']}",
+    indir=f"{config['output_dir']}"
   threads: 1
   log:
     f"{config['output_dir']}/logs/snpeff_build.txt"
   shell:
     """
     echo "Reading from {input.gbk_file}"
-    snpEff build -genbank -nodownload -dataDir {input.indir} -c {params.config} pyrodigal &> {log}
+    snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} pyrodigal &> {log}
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
+
+#snpEff build -genbank -nodownload -dataDir /nfs/research/jlees/shorsfield/McClean_group_analysis -c /hps/software/users/jlees/shorsfield/software/ExpEvoAnalyzer/scripts/snpEff.config pyrodigal
 
 checkpoint ska_build:
   input:
@@ -124,17 +128,20 @@ rule snpeff_run:
   input:
     sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
     snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin"
-    indir=f"{config['output_dir']}/pyrodigal"
     vcf=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
   output:
+    ann_vcf=f"{config['output_dir']}/snpeff/{{sample}}.ann.vcf"
   params:
     config=f"{config['snpEFF_config']}"
+    indir=f"{config['output_dir']}"
   threads: 1
   log:
     f"{config['output_dir']}/logs/snpeff_build.txt"
   shell:
     """
     echo "Reading from {input.gbk_file}"
-    snpEff -nodownload -dataDir {input.indir} -c {params.config} pyrodigal {input.vcf} &> {log}
+    snpEff -nodownload -dataDir {params.indir} -c {params.config} pyrodigal {input.vcf} > {output.ann_vcf} 2> {log}
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
+
+#snpEff -nodownload -dataDir /nfs/research/jlees/shorsfield/McClean_group_analysis -c scripts/snpEff.config pyrodigal /nfs/research/jlees/shorsfield/McClean_group_analysis/Variant_Calling/Variant_Calling/D4H1_002/10_breseq/output.vcf > /nfs/research/jlees/shorsfield/McClean_group_analysis/expevoanalyzer_test_old/D4H1_002.ann.vcf
