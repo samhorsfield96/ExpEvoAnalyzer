@@ -25,7 +25,7 @@ rule all:
    input:
       f"{config['output_dir']}/reads_list/reads_list_all.tsv",
       f"{config['output_dir']}/shovill/contigs.fa",
-      f"{config['output_dir']}/bakta/genes.gbff",
+      f"{config['output_dir']}/bakta/genes.gbk",
       f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
       get_snpeff_run
 
@@ -93,8 +93,8 @@ rule snpeff_build:
   input:
     gbk_file = f"{config['output_dir']}/bakta/genes.gbk"
   output:
-    sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
-    snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin"
+    sequence=f"{config['output_dir']}/bakta/sequence.bin",
+    snpEffectPredictor=f"{config['output_dir']}/bakta/snpEffectPredictor.bin"
   params:
     config=f"{config['snpEFF_config']}",
     indir=f"{config['output_dir']}",
@@ -104,13 +104,11 @@ rule snpeff_build:
   shell:
     """
     echo "Reading from {input.gbk_file}"
-    snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} pyrodigal &> {log}
+    snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} bakta &> {log}
     echo "Built {output.snpEffectPredictor} and {output.sequence}"
     """
-
-#snpEff build -genbank -nodownload -dataDir /nfs/research/jlees/shorsfield/McClean_group_analysis -c /hps/software/users/jlees/shorsfield/software/ExpEvoAnalyzer/scripts/snpEff.config pyrodigal
-
-checkpoint ska_build:
+    
+rule ska_build:
   input:
     infile=f"{config['output_dir']}/reads_list/{{sample}}.txt",
   output:
@@ -148,21 +146,21 @@ rule ska_map:
 
 rule snpeff_run:
   input:
-    sequence=f"{config['output_dir']}/pyrodigal/sequence.bin",
-    snpEffectPredictor=f"{config['output_dir']}/pyrodigal/snpEffectPredictor.bin",
+    sequence=f"{config['output_dir']}/bakta/sequence.bin",
+    snpEffectPredictor=f"{config['output_dir']}/bakta/snpEffectPredictor.bin",
     vcf=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
   output:
     ann_vcf=f"{config['output_dir']}/snpeff/{{sample}}.ann.vcf"
   params:
     config=f"{config['snpEFF_config']}",
-    indir=f"{config['output_dir']}"
+    indir=f"{config['output_dir']}",
+    outdir=f"{config['output_dir']}/snpeff"
   threads: 1
   log:
-    f"{config['output_dir']}/logs/snpeff_build_{{sample}}.txt"
+    f"{config['output_dir']}/logs/snpeff_eff_{{sample}}.txt"
   shell:
     """
-    snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir {params.indir} -c {params.config} pyrodigal {input.vcf} > {output.ann_vcf} 2> {log}
-    echo "Built {output.snpEffectPredictor} and {output.sequence}"
+    mkdir -p {params.outdir}
+    snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir {params.indir} -c {params.config} bakta {input.vcf} > {output.ann_vcf} 2> {log}
+    echo "Built {input.snpEffectPredictor} and {input.sequence}"
     """
-
-#snpEff eff -i vcf -o vcf -noStats -lof -noLog -v -nodownload -dataDir /nfs/research/jlees/shorsfield/McClean_group_analysis -c scripts/snpEff.config pyrodigal /nfs/research/jlees/shorsfield/McClean_group_analysis/ska_map.vcf > /nfs/research/jlees/shorsfield/McClean_group_analysis/ska_map.ann.vcf 2> /nfs/research/jlees/shorsfield/McClean_group_analysis/snpEff.log
