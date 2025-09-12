@@ -184,31 +184,31 @@ def read_ann_vcf(indir, outfile, ignore_n=True, ignore_ref=True, debug=False):
 
 read_ann_vcf(snakemake.params.indir, snakemake.output.outfile)
 
-def main():
-    parser = argparse.ArgumentParser(description="Summarize SNPeff-annotated VCFs into a matrix (CHROM:POS columns).")
-    parser.add_argument("--indir", required=True, help="Directory containing *.ann.vcf files")
-    parser.add_argument("--outfile", required=True, help="Output CSV file (or .xlsx if you prefer df.to_excel)")
-    parser.add_argument("--ignore-n", action="store_true", help="Ignore variants with N bases")
-    parser.add_argument("--ignore-ref", action="store_true", help="Use *.REF.ann.vcf to filter assembly-matching alleles")
-    parser.add_argument("--debug", action="store_true", help="Print debug info (counts, example dropped sites)")
-    args = parser.parse_args()
+# def main():
+#     parser = argparse.ArgumentParser(description="Summarize SNPeff-annotated VCFs into a matrix (CHROM:POS columns).")
+#     parser.add_argument("--indir", required=True, help="Directory containing *.ann.vcf files")
+#     parser.add_argument("--outfile", required=True, help="Output CSV file (or .xlsx if you prefer df.to_excel)")
+#     parser.add_argument("--ignore-n", action="store_true", help="Ignore variants with N bases")
+#     parser.add_argument("--ignore-ref", action="store_true", help="Use *.REF.ann.vcf to filter assembly-matching alleles")
+#     parser.add_argument("--debug", action="store_true", help="Print debug info (counts, example dropped sites)")
+#     args = parser.parse_args()
 
-    all_sites, sample_variants, ref_variants, ref_vcf = parse_vcfs(args.indir, ignore_n=args.ignore_n)
-    df, dropped_sites = build_matrix(all_sites, sample_variants, ref_variants, ignore_ref=args.ignore_ref, debug=args.debug)
+#     all_sites, sample_variants, ref_variants, ref_vcf = parse_vcfs(args.indir, ignore_n=args.ignore_n)
+#     df, dropped_sites = build_matrix(all_sites, sample_variants, ref_variants, ignore_ref=args.ignore_ref, debug=args.debug)
 
-    df.to_csv(args.outfile, index=False)
+#     df.to_csv(args.outfile, index=False)
 
-    if args.debug:
-        print(f"Wrote output to {args.outfile}")
-        if ref_vcf:
-            print(f"Used REF VCF: {ref_vcf}")
-        if len(dropped_sites) == 0:
-            print("No sites were dropped.")
-        else:
-            print(f"Dropped {len(dropped_sites)} sites (example first 10): {dropped_sites[:10]}")
+#     if args.debug:
+#         print(f"Wrote output to {args.outfile}")
+#         if ref_vcf:
+#             print(f"Used REF VCF: {ref_vcf}")
+#         if len(dropped_sites) == 0:
+#             print("No sites were dropped.")
+#         else:
+#             print(f"Dropped {len(dropped_sites)} sites (example first 10): {dropped_sites[:10]}")
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
 
 
