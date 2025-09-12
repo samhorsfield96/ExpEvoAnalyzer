@@ -15,7 +15,7 @@ reference_assembly: ""
 shovill_params: ""
 
 # size of kmer used for ska2
-ksize: 21
+ksize: 31
 
 # path to snpEff config, found in script directory
 snpEFF_config: scripts/snpEff.config
