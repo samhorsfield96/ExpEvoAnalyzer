@@ -51,12 +51,12 @@ def detect_paired_fastq(input_dir, output_dir, reference_reads_R1=None, referenc
     output_file = os.path.join(output_dir, "reads_list_all.tsv")
     with open(output_file, "w") as out:
         for sample_id, reads in sorted(pairs.items()):
-            indiv_output_file = os.path.join(output_dir, sample_id + ".txt")
             if "R1" in reads and "R2" in reads:  # Only keep properly paired
                 full_path_R1, reference = reads['R1']
                 full_path_R2, reference = reads['R2']
                 ref_str = ".REF" if reference else ""
                 out.write(f"{sample_id + ref_str}\t{full_path_R1}\t{full_path_R2}\n")
+                indiv_output_file = os.path.join(output_dir, sample_id + ref_str + ".txt")
                 with open(indiv_output_file, "w") as indiv_out:
                     indiv_out.write(f"{sample_id + ref_str}\t{full_path_R1}\t{full_path_R2}\n")
 
@@ -64,7 +64,7 @@ def detect_paired_fastq(input_dir, output_dir, reference_reads_R1=None, referenc
             full_path, reference = fasta
             ref_str = ".REF" if reference else ""
             out.write(f"{sample_id + ref_str}\t{full_path}\n")
-            indiv_output_file = os.path.join(output_dir, sample_id + ".txt")
+            indiv_output_file = os.path.join(output_dir, sample_id + ref_str + ".txt")
             with open(indiv_output_file, "w") as indiv_out:
                 indiv_out.write(f"{sample_id + ref_str}\t{full_path}\n")
 
