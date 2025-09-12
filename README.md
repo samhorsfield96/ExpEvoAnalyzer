@@ -5,6 +5,8 @@ ExpEvoAnalyzer uses [shovill](https://github.com/tseemann/shovill) for assembly,
 
 ExpEvoAnalyzer can either be run on assemblies or paired-end reads, and works with gzipped files.
 
+ExpEvoAnalyzer filters variants caused by assembly errors by mapping reference reads back to the original assembly, and filtering any shared variants.
+
 ## Dependencies:
 
 * python>=3.9
