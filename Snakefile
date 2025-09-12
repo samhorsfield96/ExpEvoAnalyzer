@@ -38,7 +38,8 @@ checkpoint create_file_list:
     outfile=f"{config['output_dir']}/reads_list/reads_list_all.tsv"
   params:
     reference_reads_R1=f"{config['reference_reads_R1']}",
-    reference_reads_R2=f"{config['reference_reads_R2']}"
+    reference_reads_R2=f"{config['reference_reads_R2']}",
+    reference_assembly=f"{config['reference_assembly']}"
   script:
     "scripts/create_file_list.py"
 
@@ -49,24 +50,53 @@ def get_create_file_list(wildcards):
     # discover all .txt files in the directory
     return [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith(".txt")]
 
-rule shovill:
-  input:
-    r1=f"{config['reference_reads_R1']}",
-    r2=f"{config['reference_reads_R2']}"
-  output:
-    outdir=directory(f"{config['output_dir']}/shovill"),
-    contigs=f"{config['output_dir']}/shovill/contigs.fa"
-  threads: 40
-  log:
-    f"{config['output_dir']}/logs/shovill.txt"
-  params:
-    tmp_dir=f"{config['output_dir']}/tmp",
-    shovill_params=f"{config['shovill_params']}"
-  shell:
-    """
-    shovill {params.shovill_params} --assembler spades --outdir {output.outdir} --force --R1 {input.r1} --R2 {input.r2} --cpus {threads} --tmpdir {params.tmp_dir} &> {log}
-    rmdir {params.tmp_dir}
-    """
+if config['reference_reads_R1'] != "" and config['reference_reads_R2'] != "":
+  rule shovill:
+    input:
+      r1=f"{config['reference_reads_R1']}",
+      r2=f"{config['reference_reads_R2']}"
+    output:
+      outdir=directory(f"{config['output_dir']}/shovill"),
+      contigs=f"{config['output_dir']}/shovill/contigs.fa"
+    threads: 40
+    log:
+      f"{config['output_dir']}/logs/shovill.txt"
+    params:
+      tmp_dir=f"{config['output_dir']}/tmp",
+      shovill_params=f"{config['shovill_params']}"
+    shell:
+      """
+      shovill {params.shovill_params} --assembler spades --outdir {output.outdir} --force --R1 {input.r1} --R2 {input.r2} --cpus {threads} --tmpdir {params.tmp_dir} &> {log}
+      rmdir {params.tmp_dir}
+      """
+
+elif config['reference_assembly'] != "":
+  def get_assembly(wildcards):
+    base = f"{config['reference_assembly']}"
+    if os.path.exists(base):
+      return base
+    else:
+        raise ValueError(f"No assembly file found for sample {config['reference_assembly']}")
+
+  rule copy_ref_assembly:
+    input:
+      assembly=get_assembly
+    output:
+      contigs=f"{config['output_dir']}/shovill/contigs.fa"
+    threads: 1
+    params:
+      outdir=f"{config['output_dir']}/shovill"
+    log:
+      f"{config['output_dir']}/logs/copy_reference_assembly.txt"
+    shell:
+      r"""
+      mkdir -p {params.outdir}
+      if [[ "{input.assembly}" == *.gz ]]; then
+          gunzip -c "{input.assembly}" > "{output.contigs}"
+      else
+          cp "{input.assembly}" "{output.contigs}"
+      fi
+      """
 
 rule bakta:
     input:

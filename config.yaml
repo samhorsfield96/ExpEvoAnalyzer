@@ -4,9 +4,12 @@ output_dir:
 # tsv file with an absolute file path per line
 input_dir: 
 
-# reference read files
-reference_reads_R1: 
-reference_reads_R2: 
+# reference read files. Need to specify either this or reference_assembly.
+reference_reads_R1: ""
+reference_reads_R2: ""
+
+# reference assembly. Need to specify either this or reference_reads_R1 and reference_reads_R2.
+reference_assembly: ""
 
 # shovel additional params e.g. --trim for read trimming
 shovill_params: ""
