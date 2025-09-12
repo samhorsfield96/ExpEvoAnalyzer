@@ -3,6 +3,8 @@ A snakemake pipeline to analyse experimental evolution data.
 
 ExpEvoAnalyzer uses [shovill](https://github.com/tseemann/shovill) for assembly, [bakta](https://github.com/oschwengers/bakta) for genome annotation, [SKA2](https://github.com/bacpop/ska.rust) for variant calling, and [SnpEff](https://pcingola.github.io/SnpEff/) for variant annotation.
 
+ExpEvoAnalyzer can either be run on assemblies or paired-end reads, and works with gzipped files.
+
 ## Dependencies:
 
 * python>=3.9
@@ -15,6 +17,7 @@ ExpEvoAnalyzer uses [shovill](https://github.com/tseemann/shovill) for assembly,
 * snpeff
 * shovill
 * pyvcf
+* gzip
 
 ## To install:
 
@@ -29,13 +32,14 @@ mamba activate expevoanalyzer
 
 ## Running:
 
-ExpEvoAnalyzer expects all reads to be trimmed (adapters removed).
+ExpEvoAnalyzer expects all reads to be trimmed (adapters removed) if provided. ExpEvoAnalyzer can also be run with assemblies.
 
 Update `config.yaml` to specify workflow and directory paths.
 - `output_dir`: path to output directory. Does not need to exist prior to running.
 - `input_dir`: path to directory containing paired-end FASTQ files (gzipped or uncompressed). 
-- `reference_reads_R1`: path to FASTQ of read 1 for the reference isolate.
-- `reference_reads_R2`: path to FASTQ of read 2 for the reference isolate.
+- `reference_reads_R1`: path to FASTQ of read 1 for the reference isolate. Can be provided in absence of `reference_assembly`.
+- `reference_reads_R2`: path to FASTQ of read 2 for the reference isolate. Can be provided in absence of `reference_assembly`.
+- `reference_assembly`: paths to FASTA of reference assembly (if already generated). Can be provided in absence of `reference_reads_R1` and `reference_reads_R1`.
 - `shovill_params`: additional parameters for [shovill](https://github.com/tseemann/shovill) e.g. `--trim`
 - `ksize`: integer, k-mer size used for [SKA2](https://github.com/bacpop/ska.rust)
 - `snpEFF_config`: path to SnpEff config file, usually `scripts/snpEff.config`
