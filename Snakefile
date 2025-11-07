@@ -230,7 +230,7 @@ elif config['alignment_method'] in ["bwa"]:
       os.makedirs(params.outdir, exist_ok=True)
       df = pd.read_csv(input.sheet, sep="\t", header=None, names=["sample", "r1", "r2"])
       r1, r2 = df.loc[0, ["r1", "r2"]]
-      shell(f"bwa mem -t {threads} {input.contigs} {r1} {r2} | samtools view -Sb - > {output.outfile} &> {log}")
+      shell(f"bwa mem -t {threads} {input.contigs} {r1} {r2} 2> {log} | samtools view -Sb - > {output.outfile}")
 
   # SORT BAM
   rule sort_bam:
