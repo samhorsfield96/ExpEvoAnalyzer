@@ -163,7 +163,7 @@ rule snpeff_build:
     """
     snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} bakta &> {log}
     """
-    
+
 if config['alignment_method'] in ["ska"]:
   rule ska_build:
     input:
@@ -244,12 +244,26 @@ elif config['alignment_method'] in ["bwa"]:
     shell:
         "samtools sort -o {output} {input} &> {log}"
 
+  # Mark duplicates
+  rule mark_duplicates:
+      input:
+          f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam"
+      output:
+          f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.dedup.bam"
+      threads: 8
+      params:
+        tmp_pref=f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.dedup.bam.tmp"
+      shell:
+        """
+        samtools markdup -r -@ {threads} -T {params.tmp_pref} {input} {output}
+        """
+
   # INDEX BAM
   rule index_bam:
     input:
-        f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam"
+        f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.dedup.bam"
     output:
-        f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam.bai"
+        f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.dedup.bam.bai"
     log:
       f"{config['output_dir']}/logs/samtools_index_{{sample}}.txt"
     shell:
@@ -259,8 +273,8 @@ elif config['alignment_method'] in ["bwa"]:
   rule call_variants:
     input:
         contigs=f"{config['output_dir']}/shovill/contigs.fa",
-        bam=f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam",
-        bai=f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam.bai"
+        bam=f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.dedup.bam",
+        bai=f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.dedup.bam.bai"
     output:
         outfile=f"{config['output_dir']}/vcfs/{{sample}}.vcf"
     params:
