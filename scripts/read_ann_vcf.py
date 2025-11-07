@@ -36,17 +36,18 @@ def parse_vcf_file(vcf_path, ignore_n=False):
             effect = parts[1]
             impact = parts[2]
             gene = parts[3]
+            locus = parts[4]
             score = IMPACT_ORDER.get(impact, -1)
             if score > best_score:
-                best_ann = (gene, effect, impact)
+                best_ann = (gene, locus, effect, impact)
                 best_score = score
 
         if best_ann is None:
             continue
 
-        gene, effect, impact = best_ann
+        gene, locus, effect, impact = best_ann
         alt_alleles = ",".join(str(a) for a in record.ALT)
-        variants[pos_id] = f"{alt_alleles}|{gene}|{impact}|{effect}"
+        variants[pos_id] = f"{alt_alleles}|{gene}|{locus}|{impact}|{effect}"
 
     return variants
 

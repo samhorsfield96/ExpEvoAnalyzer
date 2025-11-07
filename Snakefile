@@ -233,29 +233,20 @@ elif config['alignment_method'] in ["bwa"]:
       r1, r2 = df.loc[0, ["r1", "r2"]]
       shell(f"bwa mem -t {threads} {input.contigs} {r1} {r2} 2> {log} | samtools view -Sb - > {output.outfile}")
 
-  # SORT BAM
-  rule sort_bam:
-    input:
-        f"{config['output_dir']}/bwa_mem/{{sample}}.bam"
-    output:
-        f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam"
-    log:
-      f"{config['output_dir']}/logs/samtools_sort_{{sample}}.txt"
-    shell:
-        "samtools sort -o {output} {input} &> {log}"
-
   # Mark duplicates
   rule mark_duplicates:
       input:
-          f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam"
+          f"{config['output_dir']}/bwa_mem/{{sample}}.bam"
       output:
           f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.dedup.bam"
       threads: 8
       params:
-        tmp_pref=f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.dedup.bam.tmp"
+        tmp_pref=f"{config['output_dir']}/bwa_mem/{{sample}}.bam.tmp"
+      log:
+        f"{config['output_dir']}/logs/samtools_dedup_{{sample}}.txt"
       shell:
         """
-        samtools markdup -r -@ {threads} -T {params.tmp_pref} {input} {output}
+        samtools collate -@ {threads} -T {params.tmp_pref} -O -u {input} 2> {log} | samtools fixmate -@ {threads} -m -u - - 2>> {log} | samtools sort -@ {threads} -T {params.tmp_pref} -u - 2>> {log} | samtools markdup -@ {threads} -T {params.tmp_pref} - {output} 2>> {log}
         """
 
   # INDEX BAM
