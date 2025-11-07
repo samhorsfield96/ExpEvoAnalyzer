@@ -1,5 +1,6 @@
 import glob
 import os
+import pandas as pd
 
 configfile: "config.yaml"
 
@@ -186,9 +187,9 @@ if config['alignment_method'] in ["ska"]:
       infile=f"{config['output_dir']}/ska_build/{{sample}}.skf",
       contigs=f"{config['output_dir']}/shovill/contigs.fa"
     output:
-      outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
+      outfile=f"{config['output_dir']}/vcfs/{{sample}}.vcf"
     params:
-      outdir=f"{config['output_dir']}/ska_map",
+      outdir=f"{config['output_dir']}/vcfs",
     threads: 1
     log:
       f"{config['output_dir']}/logs/ska_map_{{sample}}.txt"
@@ -199,6 +200,54 @@ if config['alignment_method'] in ["ska"]:
       """
 
 elif config['alignment_method'] in ["bwa"]:
+  # Run BWA MEM per sample
+  rule bwa_map:
+    input:
+        contigs=f"{config['output_dir']}/shovill/contigs.fa"
+        sheet=f"{config['output_dir']}/reads_list/{{sample}}.txt",
+    output:
+        outdir=directory(f"{config['output_dir']}/bwa_mem"),
+        outfile=f"{config['output_dir']}/bwa_mem/{sample}.bam"
+    threads: 1
+    run:
+        df = pd.read_csv(input.sheet, sep="\t", header=None, names=["sample", "r1", "r2"])
+        r1, r2 = df.loc[0, ["r1", "r2"]]
+        shell(f"bwa mem -t {threads} {input.contigs} {r1} {r2} | samtools view -Sb - > {output.outfile}")
+
+  # SORT BAM
+  rule sort_bam:
+    input:
+        f"{config['output_dir']}/bwa_mem/{sample}.bam"
+    output:
+        f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam"
+    shell:
+        "samtools sort -o {output} {input}"
+
+  # INDEX BAM
+  rule index_bam:
+    input:
+        f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam"
+    output:
+        f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam.bai"
+    shell:
+        "samtools index -o {output} {input}"
+
+  # CALL VARIANTS
+  rule call_variants:
+    input:
+        contigs=f"{config['output_dir']}/shovill/contigs.fa",
+        bam=f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam",
+        bai=f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam.bai"
+    output:
+        outfile=f"{config['output_dir']}/vcfs/{{sample}}.vcf"
+    params:
+      outdir=f"{config['output_dir']}/vcfs",
+    shell:
+        """
+        mkdir {params.outdir}
+        bcftools mpileup -Ou -f {input.contigs} {input.bam} | \
+        bcftools call -mv -Ov -o {output.outfile}
+        """
 
 checkpoint snpeff_run:
   input:
