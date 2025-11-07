@@ -51,7 +51,7 @@ def get_create_file_list(wildcards):
     # discover all .txt files in the directory
     return [os.path.join(outdir, f) for f in os.listdir(outdir) if f.endswith(".txt")]
 
-if config['reference_reads_R1'] != "" and config['reference_reads_R2'] != "":
+if config['reference_reads_R1'] != "" and config['reference_reads_R2'] != "" and config['reference_assembly'] == "":
   rule shovill:
     input:
       r1=f"{config['reference_reads_R1']}",
@@ -163,6 +163,7 @@ rule snpeff_build:
     """
     snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} bakta &> {log}
     """
+    
 if config['alignment_method'] in ["ska"]:
   rule ska_build:
     input:
@@ -268,7 +269,7 @@ elif config['alignment_method'] in ["bwa"]:
       f"{config['output_dir']}/logs/bcftools_{{sample}}.txt"
     shell:
         """
-        mkdir {params.outdir}
+        mkdir -p {params.outdir}
         bcftools mpileup -Ou -f {input.contigs} {input.bam} | \
         bcftools call -mv -Ov -o {output.outfile} &> {log}
         """
