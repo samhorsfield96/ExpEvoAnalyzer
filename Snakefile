@@ -70,6 +70,7 @@ if config['reference_reads_R1'] != "" and config['reference_reads_R2'] != "":
       rmdir {params.tmp_dir}
       """
 
+# rename reference assembly
 elif config['reference_assembly'] != "":
   def get_assembly(wildcards):
     base = f"{config['reference_assembly']}"
@@ -98,26 +99,52 @@ elif config['reference_assembly'] != "":
       fi
       """
 
-rule bakta:
+# only run bakta if not already annotated
+if config['reference_assembly_gbk'] == "":
+  rule bakta:
+      input:
+        contigs=f"{config['output_dir']}/shovill/contigs.fa"
+      output:
+        ann_dir = directory(f"{config['output_dir']}/bakta"),
+        gbk_file = f"{config['output_dir']}/bakta/genes.gbk",
+        gbff_file = f"{config['output_dir']}/bakta/genes.gbff",
+      threads: 40
+      params:
+          DB = directory(f"{config['bakta_db']}"),
+          tmp_dir=f"{config['output_dir']}/tmp"
+      log:
+          f"{config['output_dir']}/logs/bakta.log"
+      shell:
+          """
+          mkdir -p {params.tmp_dir}
+          bakta {input.contigs} --tmp-dir {params.tmp_dir} --force --keep-contig-headers --db {params.DB} --prefix genes --translation-table 11 --skip-plot --threads {threads} --output {output.ann_dir} &> {log}
+          rmdir {params.tmp_dir}
+          cp {output.gbff_file} {output.gbk_file}
+          """
+
+elif config['reference_assembly_gbk'] != "":
+  def get_assembly_gbk(wildcards):
+    base = f"{config['reference_assembly_gbk']}"
+    if os.path.exists(base):
+      return base
+    else:
+        raise ValueError(f"No assembly file found for sample {config['reference_assembly']}")
+
+  rule copy_ref_assembly_gbk:
     input:
-      contigs=f"{config['output_dir']}/shovill/contigs.fa"
+      assembly=get_assembly_gbk
     output:
-      ann_dir = directory(f"{config['output_dir']}/bakta"),
-      gbk_file = f"{config['output_dir']}/bakta/genes.gbk",
-      gbff_file = f"{config['output_dir']}/bakta/genes.gbff",
-    threads: 40
+      gbk=f"{config['output_dir']}/bakta/genes.gbk",
+    threads: 1
     params:
-        DB = directory(f"{config['bakta_db']}"),
-        tmp_dir=f"{config['output_dir']}/tmp"
+      outdir=f"{config['output_dir']}/bakta"
     log:
-        f"{config['output_dir']}/logs/bakta.log"
+      f"{config['output_dir']}/logs/copy_reference_assembly_gbk.txt"
     shell:
-        """
-        mkdir -p {params.tmp_dir}
-        bakta {input.contigs} --tmp-dir {params.tmp_dir} --force --keep-contig-headers --db {params.DB} --prefix genes --translation-table 11 --skip-plot --threads {threads} --output {output.ann_dir} &> {log}
-        rmdir {params.tmp_dir}
-        cp {output.gbff_file} {output.gbk_file}
-        """
+      r"""
+      mkdir -p {params.outdir}
+      cp "{input.assembly}" "{output.gbk}"
+      """
 
 rule snpeff_build:
   input:
@@ -135,41 +162,43 @@ rule snpeff_build:
     """
     snpEff build -genbank -nodownload -dataDir {params.indir} -c {params.config} bakta &> {log}
     """
+if config['alignment_method'] in ["ska"]:
+  rule ska_build:
+    input:
+      infile=f"{config['output_dir']}/reads_list/{{sample}}.txt",
+    output:
+      outfile=f"{config['output_dir']}/ska_build/{{sample}}.skf"
+    params:
+      outdir=f"{config['output_dir']}/ska_build",
+      outpref=f"{config['output_dir']}/ska_build/{{sample}}",
+      ksize=f"{config['ksize']}"
+    threads: 8
+    log:
+      f"{config['output_dir']}/logs/ska_build_{{sample}}.txt"
+    shell:
+      """
+      mkdir -p {params.outdir}
+      ska build -v -o {params.outpref} -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
+      """
 
-rule ska_build:
-  input:
-    infile=f"{config['output_dir']}/reads_list/{{sample}}.txt",
-  output:
-    outfile=f"{config['output_dir']}/ska_build/{{sample}}.skf"
-  params:
-    outdir=f"{config['output_dir']}/ska_build",
-    outpref=f"{config['output_dir']}/ska_build/{{sample}}",
-    ksize=f"{config['ksize']}"
-  threads: 8
-  log:
-    f"{config['output_dir']}/logs/ska_build_{{sample}}.txt"
-  shell:
-    """
-    mkdir -p {params.outdir}
-    ska build -v -o {params.outpref} -k {params.ksize} --threads {threads} -f {input.infile} &> {log}
-    """
+  rule ska_map:
+    input:
+      infile=f"{config['output_dir']}/ska_build/{{sample}}.skf",
+      contigs=f"{config['output_dir']}/shovill/contigs.fa"
+    output:
+      outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
+    params:
+      outdir=f"{config['output_dir']}/ska_map",
+    threads: 1
+    log:
+      f"{config['output_dir']}/logs/ska_map_{{sample}}.txt"
+    shell:
+      """
+      mkdir -p {params.outdir}
+      ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
+      """
 
-rule ska_map:
-  input:
-    infile=f"{config['output_dir']}/ska_build/{{sample}}.skf",
-    contigs=f"{config['output_dir']}/shovill/contigs.fa"
-  output:
-    outfile=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
-  params:
-    outdir=f"{config['output_dir']}/ska_map",
-  threads: 1
-  log:
-    f"{config['output_dir']}/logs/ska_map_{{sample}}.txt"
-  shell:
-    """
-    mkdir -p {params.outdir}
-    ska map -f vcf -v -o {output.outfile} --threads {threads} {input.contigs} {input.infile} &> {log}
-    """
+elif config['alignment_method'] in ["bwa"]:
 
 checkpoint snpeff_run:
   input:

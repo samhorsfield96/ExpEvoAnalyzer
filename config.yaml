@@ -11,6 +11,12 @@ reference_reads_R2: ""
 # reference assembly. Need to specify either this or reference_reads_R1 and reference_reads_R2.
 reference_assembly: ""
 
+# reference Genbank file. Can specify this if wanting to use specific assembly with annotations.
+reference_assembly_gbk: ""
+
+# Aligner to use for variant calling. Should be one of "ska" (aligning closely-related sequences) or "bwa" (aligning distantly-related sequences)
+alignment_method: ska
+
 # shovel additional params e.g. --trim for read trimming
 shovill_params: ""
 
