@@ -200,60 +200,84 @@ if config['alignment_method'] in ["ska"]:
       """
 
 elif config['alignment_method'] in ["bwa"]:
+  # indexing
+  rule index_reference:
+    input:
+        f"{config['output_dir']}/shovill/contigs.fa"
+    output:
+        idx=f"{config['output_dir']}/shovill/contigs.fa.bwt"
+    log:
+      f"{config['output_dir']}/logs/bwa_index.txt"
+    shell:
+        """
+        bwa index {input} &> {log}
+        """
+
   # Run BWA MEM per sample
   rule bwa_map:
     input:
-        contigs=f"{config['output_dir']}/shovill/contigs.fa"
-        sheet=f"{config['output_dir']}/reads_list/{{sample}}.txt",
+      contigs=f"{config['output_dir']}/shovill/contigs.fa",
+      sheet=f"{config['output_dir']}/reads_list/{{sample}}.txt",
+      idx=f"{config['output_dir']}/shovill/contigs.fa.bwt"
     output:
-        outdir=directory(f"{config['output_dir']}/bwa_mem"),
-        outfile=f"{config['output_dir']}/bwa_mem/{sample}.bam"
-    threads: 1
+      outfile=f"{config['output_dir']}/bwa_mem/{{sample}}.bam"
+    threads: 8
+    params:
+      outdir=f"{config['output_dir']}/bwa_mem"
+    log:
+      f"{config['output_dir']}/logs/bwa_mem_{{sample}}.txt"
     run:
-        df = pd.read_csv(input.sheet, sep="\t", header=None, names=["sample", "r1", "r2"])
-        r1, r2 = df.loc[0, ["r1", "r2"]]
-        shell(f"bwa mem -t {threads} {input.contigs} {r1} {r2} | samtools view -Sb - > {output.outfile}")
+      os.makedirs(params.outdir, exist_ok=True)
+      df = pd.read_csv(input.sheet, sep="\t", header=None, names=["sample", "r1", "r2"])
+      r1, r2 = df.loc[0, ["r1", "r2"]]
+      shell(f"bwa mem -t {threads} {input.contigs} {r1} {r2} | samtools view -Sb - > {output.outfile} &> {log}")
 
   # SORT BAM
   rule sort_bam:
     input:
-        f"{config['output_dir']}/bwa_mem/{sample}.bam"
+        f"{config['output_dir']}/bwa_mem/{{sample}}.bam"
     output:
-        f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam"
+        f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam"
+    log:
+      f"{config['output_dir']}/logs/samtools_sort_{{sample}}.txt"
     shell:
-        "samtools sort -o {output} {input}"
+        "samtools sort -o {output} {input} &> {log}"
 
   # INDEX BAM
   rule index_bam:
     input:
-        f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam"
+        f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam"
     output:
-        f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam.bai"
+        f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam.bai"
+    log:
+      f"{config['output_dir']}/logs/samtools_index_{{sample}}.txt"
     shell:
-        "samtools index -o {output} {input}"
+        "samtools index -o {output} {input} &> {log}"
 
   # CALL VARIANTS
   rule call_variants:
     input:
         contigs=f"{config['output_dir']}/shovill/contigs.fa",
-        bam=f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam",
-        bai=f"{config['output_dir']}/bwa_mem/{sample}.sorted.bam.bai"
+        bam=f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam",
+        bai=f"{config['output_dir']}/bwa_mem/{{sample}}.sorted.bam.bai"
     output:
         outfile=f"{config['output_dir']}/vcfs/{{sample}}.vcf"
     params:
       outdir=f"{config['output_dir']}/vcfs",
+    log:
+      f"{config['output_dir']}/logs/bcftools_{{sample}}.txt"
     shell:
         """
         mkdir {params.outdir}
         bcftools mpileup -Ou -f {input.contigs} {input.bam} | \
-        bcftools call -mv -Ov -o {output.outfile}
+        bcftools call -mv -Ov -o {output.outfile} &> {log}
         """
 
 checkpoint snpeff_run:
   input:
     sequence=f"{config['output_dir']}/bakta/sequence.bin",
     snpEffectPredictor=f"{config['output_dir']}/bakta/snpEffectPredictor.bin",
-    vcf=f"{config['output_dir']}/ska_map/{{sample}}.vcf"
+    vcf=f"{config['output_dir']}/vcfs/{{sample}}.vcf"
   output:
     ann_vcf=f"{config['output_dir']}/snpeff/{{sample}}.ann.vcf"
   params:
