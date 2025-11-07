@@ -1,10 +1,12 @@
-#output directory
+# output directory
 output_dir: 
 
 # tsv file with an absolute file path per line
 input_dir: 
 
-# reference read files. Need to specify either this or reference_assembly.
+# reference read files. Can specify if reference is in form of reads.
+# can also specify as ancestral strain reads along with reference assembly, 
+# if ancestral strain is different from the reference to be aligned to, to ignore SNPs present in ancestral strain.
 reference_reads_R1: ""
 reference_reads_R2: ""
 
