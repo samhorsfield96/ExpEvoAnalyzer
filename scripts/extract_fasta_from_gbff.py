@@ -1,4 +1,5 @@
 from Bio import SeqIO
+import argparse
 
 def get_options():
     description = 'Gets a nearesty neighbour for each tip on a tree.'
