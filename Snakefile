@@ -112,13 +112,14 @@ if config['reference_assembly_gbk'] == "":
       threads: 40
       params:
           DB = directory(f"{config['bakta_db']}"),
-          tmp_dir=f"{config['output_dir']}/tmp"
+          tmp_dir=f"{config['output_dir']}/tmp",
+          bakta_extra_settings=f"{config['bakta_extra_settings']}"
       log:
           f"{config['output_dir']}/logs/bakta.log"
       shell:
           """
           mkdir -p {params.tmp_dir}
-          bakta {input.contigs} --tmp-dir {params.tmp_dir} --force --keep-contig-headers --db {params.DB} --prefix genes --translation-table 11 --skip-plot --threads {threads} --output {output.ann_dir} &> {log}
+          bakta {input.contigs} --tmp-dir {params.tmp_dir} --force --keep-contig-headers --db {params.DB} --prefix genes --translation-table 11 --skip-plot --threads {threads} --output {output.ann_dir} {params.bakta_extra_settings} &> {log}
           rmdir {params.tmp_dir}
           cp {output.gbff_file} {output.gbk_file}
           """

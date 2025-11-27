@@ -51,6 +51,7 @@ Update `config.yaml` to specify workflow and directory paths.
 - `ksize`: integer, k-mer size used for [SKA2](https://github.com/bacpop/ska.rust)
 - `snpEFF_config`: path to SnpEff config file, usually `scripts/snpEff.config`
 - `bakta_db`: path to [bakta](https://github.com/oschwengers/bakta) database. This needs to be downloaded and updated prior to running (see [here](https://github.com/oschwengers/bakta#database-download))
+- `bakta_extra_settings`: enables addition of extra bakta parameters e.g. adding your own trusted protein annotations using `--protein file.fasta`. This can be generated from a gbff using the script `extract_fasta_from_gbff.py`
 
 Run snakemake:
 

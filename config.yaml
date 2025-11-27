@@ -30,3 +30,6 @@ snpEFF_config: scripts/snpEff.config
 
 # path to bakta database, needs to be downloaded and updated before running (see here https://github.com/oschwengers/bakta#database-download)
 bakta_db: 
+
+# Extra parameters for use in bakta e.g. --proteins trusted_proteins.faa for annotation with known trusted annotations
+bakta_extra_settings: ""
