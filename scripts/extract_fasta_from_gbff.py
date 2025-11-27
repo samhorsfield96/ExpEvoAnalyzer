@@ -35,7 +35,7 @@ def main():
                     locus_tag = feature.qualifiers["locus_tag"][0]
                     protein_seq = feature.qualifiers["translation"][0]
 
-                    out.write(f">{locus_tag}\n{protein_seq}\n")
+                    out.write(f">{locus_tag} {locus_tag}~~~{locus_tag}~~~{locus_tag}\n{protein_seq}\n")
 
 if __name__ == "__main__":
     main()
